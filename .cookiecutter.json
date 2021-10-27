@@ -1,0 +1,12 @@
+{
+  "_template": "gh:cjolowicz/cookiecutter-hypermodern-python",
+  "author": "Miguel-Angel Sicilia",
+  "development_status": "Development Status :: 3 - Alpha",
+  "email": "msicilia@gmail.com",
+  "friendly_name": "Pyota",
+  "github_user": "msicilia",
+  "license": "MIT",
+  "package_name": "pyota",
+  "project_name": "pyota",
+  "version": "0.0.0"
+}
