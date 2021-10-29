@@ -20,7 +20,7 @@ classifiers = [
 Changelog = "https://github.com/msicilia/pyota/releases"
 
 [tool.poetry.dependencies]
-python = "^3.6.1"
+python = ">=3.7.1,<4.0.0"
 click = "^8.0.1"
 
 [tool.poetry.dev-dependencies]
@@ -46,9 +46,13 @@ pre-commit-hooks = "^4.0.1"
 sphinx-rtd-theme = "^0.5.2"
 sphinx-click = "^3.0.1"
 Pygments = "^2.9.0"
+networkx = "^2.6.3"
 
 [tool.poetry.scripts]
 pyota = "pyota.__main__:main"
+example = "pyota.example:main"
+convert2graph = "pyota.convert2graph:main"
+
 
 [tool.coverage.paths]
 source = ["src", "*/site-packages"]
