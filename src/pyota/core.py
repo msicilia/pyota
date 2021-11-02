@@ -39,12 +39,25 @@ def get_parents_list(data:bytes, parents_count: int):
 
 def get_utxos(data:bytes, number: int):
     lst_utxos = []
-    for utxo in range(number):
+    for _ in range(number):
         input_type, data = get_next_uint8(data)
-        txn_id, data = get_next_uint32(data)
+        txn_id, data = get_next_bytes(data, 32)
         txn_index, data = get_next_uint16(data)
-        lst_utxos.append(UTXO(txn_id, txn_index, input_type))
-    return lst_utxos, data[7*number:]
+        lst_utxos.append(UTXORef(txn_id, txn_index, input_type))
+    return lst_utxos, data[(1 + 32 + 2)*number:]
+
+def get_outputs(data:bytes, number: int):
+    lst_out = []
+    for _ in range(number):
+        out_type, data = get_next_uint8(data)
+        addr_type, data = get_next_uint8(data)
+        addr, data = get_next_bytes(data, 32)
+        amount, data = get_next_uint64(data)
+        print(amount)
+        lst_out.append(TxnOutput(out_type, addr_type, addr, amount))
+    return lst_out, data[(1 + 1 + 32 + 8)*number:]
+
+
 
 def payload_type(payload: bytes) -> PayloadType:
     '''Returns the payload type from the IOTA message.'''
@@ -52,16 +65,32 @@ def payload_type(payload: bytes) -> PayloadType:
     return PayloadType(type_code)
 
 
-class UTXO():
-    '''
+class UTXORef():
+    '''References an unspent transaction output, referenced as inputs in TxnMessages.
     '''
     def __init__(self, txn_id, txn_index, input_type=0):
         self.input_type = input_type
         self.txn_id = txn_id
         self.txn_idx = txn_index
     
-    def __str__(self):
-        return f"UTXO[{self.txn_id}:{self.txn_idx}]"
+    def __repr__(self):
+        return f"UTXORef[{self.txn_id.hex()}:{self.txn_idx}]"
+
+
+class TxnOutput():
+    '''
+    '''
+    def __init__(self, output_type, addr_type, addr, amount) -> None:
+        self.output_type = output_type
+        self.addr_type = addr_type
+        self.addr = addr
+        self.amount = amount
+
+    def __repr__(self):
+        return f"TxnOutput({self.addr.hex()}:{self.amount})"
+
+    
+
 class IOTAMessage():
     '''In IOTA 2 the tangle contains messages, which then contain the transactions 
        or other structures that are processed by the IOTA protocol.
@@ -115,10 +144,12 @@ class IOTATxnMessage(IOTAMessage):
     The input transactions define the funds to consume and create the deposits onto the output 
     transactions target addresses. 
     '''
-    def __init__(self, messageid, networkid, parents, txn_type, ninputs):
+    def __init__(self, messageid, networkid, parents, txn_type, inputs, outputs, payload):
         super().__init__(messageid, networkid, parents)
         self.txn_type = txn_type
-        self.inputs_count = ninputs
+        self.inputs = inputs
+        self.outputs = outputs
+        self.payload = payload
 
 
 class IOTAMilestoneMessage(IOTAMessage):
@@ -149,13 +180,22 @@ def decode_payload(payload: bytes):
         timestamp, payload = get_next_uint64(payload)
         parents_count, payload = get_next_uint8(payload)
         mlsparents, payload = get_parents_list(payload, parents_count)
-        # TODO: Decode other info
+ 
+        # TODO: Decode other info, these fields not yet included:
+        inclusion_merkle_root, payload = get_next_bytes(payload, 32)
+        next_pow_score, payload = get_next_uint32(payload)
+        next_pow_score_mlst_idx, payload = get_next_uint32(payload)
+
         return index_number, timestamp, mlsparents
     elif t == PayloadType.TXN:
         transaction_type, payload = get_next_uint8(payload) # Always zero?
         inputs_count, payload = get_next_uint16(payload)
         utxolst, payload = get_utxos(payload, inputs_count)
-        return transaction_type, inputs_count
+        outputs_count, payload = get_next_uint16(payload)
+        outlst, payload = get_outputs(payload, outputs_count)
+        payload_length, payload =  get_next_uint32(payload)
+        txn_payload, _ = get_next_bytes(payload, payload_length)
+        return transaction_type, utxolst, outlst, txn_payload
     else:
         return NotImplemented
     
@@ -180,8 +220,8 @@ def decode_message(messageid : str, message : str, metadata: str) -> IOTAMessage
         index_no, ts, mlsparents = decode_payload(payload)
         return IOTAMilestoneMessage(messageid, networkid, parents, index_no, ts, mlsparents)
     elif payload_type(payload) == PayloadType.TXN:
-        txn_type, input_count = decode_payload(payload)
-        return IOTATxnMessage(messageid, networkid, parents, txn_type, input_count)
+        txn_type, utxolst, outlst, txn_payload = decode_payload(payload)
+        return IOTATxnMessage(messageid, networkid, parents, txn_type, utxolst, outlst, txn_payload)
     else:
         return NotImplemented
 

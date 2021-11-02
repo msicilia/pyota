@@ -20,7 +20,8 @@ def main() -> None:
                 pass
                 # print(message.get_timestamp())
             if isinstance(message,  IOTATxnMessage):
-                print(message.utxos)
+                pass
+                # print(message.inputs, message.outputs)
        
             #if nlines > 1000000:
             #    break
