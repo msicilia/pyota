@@ -1,3 +1,4 @@
+*.csv
 .mypy_cache/
 /.coverage
 /.coverage.*

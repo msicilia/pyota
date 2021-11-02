@@ -1,5 +1,5 @@
 import csv
-from .core import decode_message, IOTAMilestoneMessage
+from .core import decode_message, IOTAMilestoneMessage, IOTAIndexMessage, IOTATxnMessage
 
 def main() -> None:
     """."""
@@ -13,8 +13,15 @@ def main() -> None:
             if nlines == 1 or nlines == 2: # skip header and a estrange row
                 continue
             message = decode_message(*row)
+            if isinstance(message,  IOTAIndexMessage):
+                pass
+                #print(message.index_utf8())
             if isinstance(message,  IOTAMilestoneMessage):
-                print(message)
+                pass
+                # print(message.get_timestamp())
+            if isinstance(message,  IOTATxnMessage):
+                print(message.utxos)
+       
             #if nlines > 1000000:
             #    break
 
